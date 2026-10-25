@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Vertical reframe with the breaker's face cam as a picture-in-picture in the top corner (v6, quality pass).
-Usage: pipframe.py <in.mp4> <out.mp4> --card W:H:X:Y --face W:H:X:Y [--corner tr|tl] [--pipw 460] [--no-sr]
+Usage: pipframe.py <in.mp4> <out.mp4> --card W:H:X:Y (--face W:H:X:Y | --no-pip) [--corner tr|tl] [--pipw 460] [--no-sr]
 --card: crop of the card cam in source pixels (any aspect; scaled to fill 1080x1920)
 --face: crop of the face cam in source pixels. Prints JSON.
+--no-pip: card-only cover-fit, no face-cam overlay (streams with a single cam); --face not needed, JSON has "pip": null.
 v6 (Oct 25, Josh: "camera quality is poop"): the card crop is cleaned (temporal denoise against stream
 compression flicker), upscaled with a small super-resolution net (FSRCNN x3, OpenCV dnn_superres, ~0.2 s/frame)
 instead of a plain resize, lightly sharpened (CAS), and written near-lossless (CRF 10) so the later steps do not
@@ -15,18 +16,22 @@ src, dst = sys.argv[1], sys.argv[2]
 card, face = opt("--card", None), opt("--face", None)
 corner, pipw = opt("--corner", "tr"), int(opt("--pipw", "460"))
 use_sr = "--no-sr" not in sys.argv
-if not card or not face:
-    print(json.dumps({"error": "need --card and --face"})); sys.exit(1)
-fw, fh = [int(v) for v in face.split(":")[:2]]
+nopip = "--no-pip" in sys.argv
+if not card or (not face and not nopip):
+    print(json.dumps({"error": "need --card and --face (or --card with --no-pip)"})); sys.exit(1)
 _c = [int(v) for v in card.split(":")]
 cw, ch = _c[0] // 2 * 2, _c[1] // 2 * 2          # yuv420 frames need even crop sizes
 card = f"{cw}:{ch}:{_c[2]}:{_c[3]}"
-piph = round(pipw * fh / fw / 2) * 2
 x = "W-w-40" if corner == "tr" else "40"
 FPS = "30"
 ENC = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "10", "-pix_fmt", "yuv420p"]
-PIP = (f"crop={face},scale={pipw}:{piph}:flags=lanczos,cas=0.5,setsar=1,"
-       f"drawbox=x=0:y=0:w=iw:h=ih:color=white@0.9:t=4")
+if nopip:
+    face = piph = PIP = None
+else:
+    fw, fh = [int(v) for v in face.split(":")[:2]]
+    piph = round(pipw * fh / fw / 2) * 2
+    PIP = (f"crop={face},scale={pipw}:{piph}:flags=lanczos,cas=0.5,setsar=1,"
+           f"drawbox=x=0:y=0:w=iw:h=ih:color=white@0.9:t=4")
 MODEL = os.path.expanduser("~/autopilot/ref/sr/FSRCNN_x3.pb")
 CVPATH = "/home/user/pylib_cv"
 
@@ -34,6 +39,9 @@ def plain():
     fc = (f"[0:v]fps={FPS},crop={card},hqdn3d=0:0:4:4,"
           f"scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,cas=0.45,setsar=1[base];"
           f"[0:v]fps={FPS},{PIP}[pip];[base][pip]overlay={x}:150:format=auto[v]")
+    if nopip:
+        fc = (f"[0:v]fps={FPS},crop={card},hqdn3d=0:0:4:4,"
+              f"scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,cas=0.45,setsar=1[v]")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", src, "-filter_complex", fc, "-map", "[v]", "-map", "0:a?"]
                    + ENC + ["-c:a", "copy", dst], check=True)
     return "lanczos"
@@ -52,6 +60,8 @@ def sr():
     dec = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-i", src, "-vf", f"fps={FPS},crop={card},hqdn3d=0:0:4:4",
                             "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], stdout=subprocess.PIPE)
     fc = f"[0:v]cas=0.35,setsar=1[base];[1:v]fps={FPS},{PIP}[pip];[base][pip]overlay={x}:150:format=auto[v]"
+    if nopip:
+        fc = "[0:v]cas=0.35,setsar=1[v]"          # card only; input 1 still supplies the audio
     enc = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", "1080x1920",
                             "-r", FPS, "-i", "-", "-i", src, "-filter_complex", fc, "-map", "[v]", "-map", "1:a?"]
                            + ENC + ["-c:a", "copy", "-shortest", dst], stdin=subprocess.PIPE)
@@ -78,4 +88,4 @@ if use_sr:
         method = None; err = str(e)[:120]
 if not method:
     method = plain()
-print(json.dumps({"out": dst, "card": card, "face": face, "pip": [pipw, piph], "corner": corner, "upscale": method}))
+print(json.dumps({"out": dst, "card": card, "face": face, "pip": None if nopip else [pipw, piph], "corner": corner, "upscale": method}))

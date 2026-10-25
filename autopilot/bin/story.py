@@ -2,7 +2,9 @@
 """Make one Instagram Story (1080x1920) from real clip footage.  v2 (Oct 25: "make the stories more interesting and unique")
 Template mode (use this):
   story.py make <template> <clip.mp4> <out> --at S --title "CARD NAME" --handle "@breaker" --where "Name on Kick"
-                [--seed N] [--theme 0-4] [--clip2 other.mp4 --at2 S --title2 "OTHER CARD"] [--question "..."]
+                [--seed N] [--theme 0-4] [--clip2 other.mp4 --at2 S --title2 "OTHER CARD"] [--question "..."] [--pool cards|tcg]
+  --pool tcg  (page 2, the TCG page): wantsee / hottake / question draw from the TCG pools (WANT_OPTIONS_TCG, HOT_TAKES_TCG,
+              QUESTIONS_TCG) instead of the sports-card ones. Default cards = today's lists; outputs without --pool are unchanged.
   templates (video -> .mp4, image -> .jpg):
     hit       video  the pull at full speed, themed title bar + breaker credit
     guess     video  pixelated freeze "guess the pull" + 3-2-1, then the reveal
@@ -72,6 +74,20 @@ QUESTIONS = [("ONE AUTO /10", "TEN BASE ROOKIES"), ("RIP IT", "KEEP IT SEALED"),
              ("CHROME", "PAPER"), ("FOOTBALL BREAKS", "BASEBALL BREAKS"), ("HOBBY BOX", "RETAIL BLASTER"),
              ("YOUR GUY'S /99", "A RANDOM 1/1"), ("PATCH AUTO", "ON-CARD AUTO"), ("ROOKIE CARD", "VETERAN 1/1"),
              ("POKEMON", "SPORTS"), ("PC IT FOREVER", "FLIP IT"), ("LIVE BREAKS", "OPENING AT HOME")]
+# --pool tcg (page 2): generic hobby wording only; game names as plain words, never character or mascot names.
+WANT_OPTIONS_TCG = ["GOD PACKS", "ALT ART HITS", "BOOSTER BOX RIPS", "ONE PIECE PULLS", "LORCANA PULLS", "VINTAGE PACK OPENINGS",
+                    "WORST PULLS (SO CLOSE)", "SIR CHASES", "ETB OPENINGS", "YUGIOH RIPS", "GRADED REVEALS", "BIGGEST HITS OF THE WEEK"]
+HOT_TAKES_TCG = ["Alt arts carry the whole set. Everything else is filler.", "Grading only makes sense for a card you plan to sell.",
+                 "Sealed product is a better hold than any single raw card.", "Ripping a vintage pack is never worth it. Keep it sealed.",
+                 "Reprints don't hurt the hobby. They bring new collectors in.", "Retail is for fun, hobby boxes are for hits. Don't mix them up.",
+                 "Full arts beat gold cards every single time.", "Pull rates don't matter if the chase card is good enough.",
+                 "Opening on stream beats opening alone. The hits feel bigger.", "One Piece has the best looking cards in the hobby right now."]
+QUESTIONS_TCG = [("RIP IT", "KEEP IT SEALED"), ("ALT ART", "GOLD CARD"), ("BOOSTER BOX", "ETB"), ("GRADE IT", "KEEP IT RAW"),
+                 ("VINTAGE", "MODERN"), ("ONE PIECE", "POKEMON"), ("LORCANA", "MAGIC"), ("YUGIOH", "POKEMON"),
+                 ("SINGLE PACKS", "A WHOLE CASE"), ("PC IT FOREVER", "FLIP IT"), ("ONE SIR", "TEN FULL ARTS"), ("JAPANESE PACKS", "ENGLISH PACKS")]
+POOLS = {"cards": {"want": WANT_OPTIONS, "takes": HOT_TAKES, "questions": QUESTIONS},
+         "tcg": {"want": WANT_OPTIONS_TCG, "takes": HOT_TAKES_TCG, "questions": QUESTIONS_TCG}}
+POOL = POOLS["cards"]          # set from --pool in main()
 
 def opt(n, d=""):
     return sys.argv[sys.argv.index(n) + 1] if n in sys.argv else d
@@ -290,7 +306,7 @@ def make(tpl, clip, out, at, title, handle, where, rnd, th, t):
         credit(img, handle, where, y=1590)
     elif tpl == "question":
         qa = opt("--question")
-        a, b = qa.split("|", 1) if "|" in qa else rnd.choice(QUESTIONS)
+        a, b = qa.split("|", 1) if "|" in qa else rnd.choice(POOL["questions"])
         img = blurbg(fr, 0.55); d = ImageDraw.Draw(img)
         d.rounded_rectangle([70, 560, 1010, 1380], radius=40, fill=(255, 255, 255, 240))
         fq = font("archivo", 54); hdr = "WHICH ONE?"
@@ -306,7 +322,7 @@ def make(tpl, clip, out, at, title, handle, where, rnd, th, t):
         bar(img, 360, "SETTLE THIS", th, size=96, tilt=rnd.choice([-2, 2]))
         label(img, 1440, "reply A or B", size=42); credit(img, handle, where, y=1560)
     elif tpl == "wantsee":
-        img = blurbg(fr, 0.55); opts = rnd.sample(WANT_OPTIONS, 4)
+        img = blurbg(fr, 0.55); opts = rnd.sample(POOL["want"], 4)
         bar(img, 330, pick("wantsee"), th, size=80, tilt=rnd.choice([-2, 0, 2]))
         yend = options_card(img, th, "PICK ONE", opts, y0=470, reply=pick("wantsee_sub"))
         credit(img, handle, where, y=1560)
@@ -347,7 +363,7 @@ def make(tpl, clip, out, at, title, handle, where, rnd, th, t):
         label(img, 1180, "reply with your best line", size=42); label(img, 1290, "the moment: " + title.lower(), size=36, fname="mont")
         credit(img, handle, where, y=1560)
     elif tpl == "hottake":
-        qa = opt("--question"); take = qa if qa else rnd.choice(HOT_TAKES)
+        qa = opt("--question"); take = qa if qa else rnd.choice(POOL["takes"])
         img = blurbg(fr, 0.6); d = ImageDraw.Draw(img)
         d.rounded_rectangle([70, 470, 1010, 890], radius=40, fill=(255, 255, 255, 240))
         fnt, lines = wrap(d, take, "archivo", 54, 820)
@@ -365,6 +381,11 @@ def main():
         v1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "story.v1.py")
         os.execvp(sys.executable, [sys.executable, v1] + sys.argv[1:])
     tpl, clip, out = sys.argv[2], sys.argv[3], sys.argv[4]
+    global POOL
+    pname = opt("--pool", "cards").lower()
+    if pname not in POOLS:
+        raise SystemExit(json.dumps({"error": f"unknown --pool {pname}; use one of {sorted(POOLS)}"}))
+    POOL = POOLS[pname]
     seed = int(opt("--seed", str(random.randrange(10 ** 6))))
     rnd = random.Random(seed)
     th = THEMES[int(opt("--theme"))] if opt("--theme") else rnd.choice(THEMES)
@@ -372,7 +393,7 @@ def main():
     with tempfile.TemporaryDirectory() as t:
         make(tpl, clip, out, at, title, opt("--handle"), opt("--where"), rnd, th, t)
     vid = out.endswith(".mp4")
-    print(json.dumps({"out": out, "template": tpl, "theme": th["name"], "seed": seed,
+    print(json.dumps({"out": out, "template": tpl, "theme": th["name"], "seed": seed, "pool": pname,
                       "seconds": round(dur(out), 2) if vid else None,
                       "sha256": hashlib.sha256(open(out, "rb").read()).hexdigest()[:16]}))
 

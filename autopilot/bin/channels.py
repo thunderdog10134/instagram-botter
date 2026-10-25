@@ -7,8 +7,9 @@ State: ~/autopilot/state/channels.json  {"channels":[...], "updatedAt"}  (mirror
         live check of public numbers: Kick API (followers, live viewers, replays in the last 7 days, replay resolution);
         Twitch via yt-dlp (past broadcasts kept or not). Appends a dated snapshot to each channel's history (keeps 30).
   channels.py score                           recompute trend scores (see below) without probing
-  channels.py pick <n> [--exclude a,b] [--seed N]   weighted random pick of n clippable channels (JSON)
-  channels.py report [--top 30]               table for humans; JSON with counts
+  channels.py pick <n> [--niche tcg|cards] [--exclude a,b] [--seed N]   weighted random pick of n clippable channels (JSON)
+        --niche tcg  = niche in (pokemon, tcg-other, mixed) for the TCG page; --niche cards = (sports, mixed); no flag = all
+  channels.py report [--top 30] [--niche tcg|cards]   table for humans; JSON with counts (same niche filter)
   channels.py set <platform:handle> key=value [...]   manual fields (status=stop, clippable=no, note=...)
 Score (0..1) = 0.40 heat (log of live/average viewers vs the registry) + 0.35 growth (follower change per day over
 the last snapshots, or the tracker's 30-day trend when no history yet) + 0.15 activity (replays in the last 3/7 days)
@@ -36,6 +37,18 @@ def lang_and_flags(c, titles):
     if any(GAMBLE.search(t) for t in titles):
         c["status"] = "excluded"; c["why"] = "gambling in stream titles"
 CLIPPABLE_PLATFORMS = {"kick": "yes", "twitch": "unknown"}   # youtube: bot check from the sandbox; whatnot/tiktok/fanatics/loupe: no public replay download
+NICHES = {"tcg": ("pokemon", "tcg-other", "mixed"), "cards": ("sports", "mixed")}   # --niche groups; "mixed" sits in both
+
+def niche_arg(args):
+    if "--niche" not in args:
+        return None
+    n = args[args.index("--niche") + 1].lower()
+    if n not in NICHES:
+        raise SystemExit(json.dumps({"error": f"unknown --niche {n}; use one of {sorted(NICHES)}"}))
+    return n
+
+def niche_ok(c, niche):
+    return not niche or (c.get("niche") or "").lower() in NICHES[niche]
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc)
@@ -241,26 +254,36 @@ def pickable(c):
 def cmd_pick(args):
     n = int(args[0]); ex = set(args[args.index("--exclude") + 1].lower().split(",")) if "--exclude" in args else set()
     rnd = random.Random(int(args[args.index("--seed") + 1])) if "--seed" in args else random.Random()
+    niche = niche_arg(args)
     d = load(); score(d)
-    pool = [c for c in d["channels"] if pickable(c) and c["handle"].lower() not in ex]
+    pool = [c for c in d["channels"] if pickable(c) and c["handle"].lower() not in ex and niche_ok(c, niche)]
     total = len(pool); out = []
     while pool and len(out) < n:
         w = [0.01 + (c.get("score") or 0) ** 4 for c in pool]
         c = rnd.choices(pool, weights=w, k=1)[0]; pool.remove(c)
-        out.append({"platform": c["platform"], "handle": c["handle"], "score": c.get("score"), "maxRes": c.get("maxRes"),
+        out.append({"platform": c["platform"], "handle": c["handle"], "niche": c.get("niche"), "score": c.get("score"), "maxRes": c.get("maxRes"),
                     "instagram": c.get("instagram"), "name": c.get("name"), "parts": c.get("scoreParts")})
-    print(json.dumps({"picked": out, "pool": total}))
+    res = {"picked": out, "pool": total}
+    if niche:
+        res["niche"] = niche
+    print(json.dumps(res))
 
 def cmd_report(args):
     top = int(args[args.index("--top") + 1]) if "--top" in args else 30
-    d = load(); score(d); save(d); ch = d["channels"]
+    niche = niche_arg(args)
+    d = load(); score(d); save(d); ch = [c for c in d["channels"] if niche_ok(c, niche)]
     by = {}
     for c in ch:
         by.setdefault(c["platform"], 0); by[c["platform"]] += 1
     rows = sorted(ch, key=lambda c: -(c.get("score") or 0))[:top]
-    print(json.dumps({"total": len(ch), "byPlatform": by, "clippable": sum(1 for c in ch if pickable(c)),
-                      "top": [{"id": c["id"], "score": c.get("score"), "clippable": c.get("clippable"), "status": c.get("status"),
-                               "followers": c.get("followers"), "maxRes": c.get("maxRes")} for c in rows]}, indent=0))
+    rep = {"total": len(ch), "byPlatform": by, "clippable": sum(1 for c in ch if pickable(c)),
+           "top": [{"id": c["id"], "score": c.get("score"), "clippable": c.get("clippable"), "status": c.get("status"),
+                    "followers": c.get("followers"), "maxRes": c.get("maxRes")} for c in rows]}
+    if niche:
+        rep = {"niche": niche, **rep}
+        for r, c in zip(rep["top"], rows):
+            r["niche"] = c.get("niche")
+    print(json.dumps(rep, indent=0))
 
 def cmd_set(args):
     d = load(); k = args[0].lower(); hit = [c for c in d["channels"] if c["id"] == k]
