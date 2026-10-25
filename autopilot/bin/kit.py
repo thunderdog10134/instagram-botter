@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Overlay kit v2.2 (Oct 25; v2.1 + Paper Crab additions: title plates, before/after chip): heavy condensed display type, gold keyword, outline + drop shadow, no black boxes.
+"""Overlay kit v2.3 (Oct 25; v2.2 + pill: white rounded caption with a green check, skand.ai reference; v2.1 + Paper Crab additions: title plates, before/after chip): heavy condensed display type, gold keyword, outline + drop shadow, no black boxes.
 Fonts (OFL, ~/byb/fonts): Anton (claim, badge, CTA), Bebas Neue (captions, chips). Pages: cards (accent #f2c14e gold), tcg (#ffd23f)."""
 import os, sys, json
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -127,8 +127,40 @@ def price(text, path, page="cards", label="LAST SOLD", size=170):
     d.text((30 + (w - pw) // 2 - px0, 30 + pad + lh + 14 - py0), text, font=fp, fill=acc + (255,), stroke_width=10, stroke_fill=(15, 15, 15, 255))
     im = im.rotate(2, resample=Image.BICUBIC, expand=True)
     return _save(im, path)
+GREEN = (34, 197, 94)
+def _check(d, cx, cy, r, col=None):
+    """Green circle with a white check drawn as a polygon (Bebas has no emoji glyph). col: shadow colour (circle only)."""
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=col or (GREEN + (255,)))
+    if col: return
+    pts = [(0.12, 0.50), (0.40, 0.78), (0.90, 0.28), (0.78, 0.16), (0.40, 0.54), (0.24, 0.38)]      # check mark in a unit square
+    d.polygon([(cx + (u - 0.51) * 1.3 * r, cy + (v - 0.47) * 1.3 * r) for u, v in pts], fill=(255, 255, 255, 255))
+def pill(text, path, page="cards", size=84, maxw=980, check=True):
+    """Pill (v2.3, skand.ai 'comment anything' reference): white rounded rectangle (radius 28, soft shadow), black Bebas caps,
+    a green check circle at the right end. Two lines when text has a newline (both centred); a literal ✅/✔ in the text is
+    stripped and drawn as the check. Auto-shrinks the font until the pill fits maxw. padx 40, pady 22."""
+    text = text.replace("\\n", "\n")
+    if any(ch in text for ch in "\u2705\u2714\u2713"): check = True
+    lines = [l.strip().upper() for l in text.replace("\u2705", "").replace("\u2714", "").replace("\u2713", "").split("\n") if l.strip()] or [" "]
+    px, py, gap, radius = 40, 22, 10, 28
+    while True:
+        f = font("bebas", size); bbs = [_tw(f, l) for l in lines]
+        lh = max(b[3] - b[1] for b in bbs); tw = max(b[2] - b[0] for b in bbs)
+        th = lh * len(lines) + gap * (len(lines) - 1)
+        cr = int(min(lh * 0.62, th * 0.5)) if check else 0                                        # check circle radius
+        w = tw + px * 2 + ((cr * 2 + 26) if check else 0); h = th + py * 2
+        if w <= maxw or size <= 24: break
+        size = max(24, int(size * maxw / w) - 1)
+    def draw(d, dx, dy, col, shadow):
+        d.rounded_rectangle([dx, dy, dx + w, dy + h], radius, fill=col or (255, 255, 255, 255))
+        if shadow: return
+        y = dy + py
+        for l, b in zip(lines, bbs):
+            d.text((dx + px + (tw - (b[2] - b[0])) // 2 - b[0], y - b[1]), l, font=f, fill=(0, 0, 0, 255)); y += lh + gap
+        if check: _check(d, dx + px + tw + 26 + cr, dy + h // 2, cr)
+    return _save(_shadowed(w, h, draw, blur=16, off=(0, 10), alpha=150), path)
 if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else "/tmp/kit"; os.makedirs(out, exist_ok=True)
     r = {"number": number("/43", f"{out}/number.png"), "badge": badge("NUMBERED TO 43", f"{out}/badge.png"), "chip": chip("LIVE ON KICK  ·  @HONEYHOLECOLLECT", f"{out}/chip.png"),
-         "cap": captionbox(["jade", "cargill", "49", "of"], f"{out}/cap.png", keyword="cargill"), "cta": cta("PULL", f"{out}/cta.png"), "scrim": scrim(f"{out}/scrim.png")}
+         "cap": captionbox(["jade", "cargill", "49", "of"], f"{out}/cap.png", keyword="cargill"), "cta": cta("PULL", f"{out}/cta.png"), "scrim": scrim(f"{out}/scrim.png"),
+         "pill": pill("COMMENT ANYTHING \u2705\nFULL REPLAY IN YOUR DMS", f"{out}/pill.png"), "pilltop": pill("COMMENT ANYTHING \u00b7 REPLAY IN DMS", f"{out}/pilltop.png", size=48, maxw=620)}
     print(json.dumps(r))

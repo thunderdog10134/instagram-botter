@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """beats.py <clip.mp4> <words.json> <out beats.json> [--claim "/43"] [--badge "NUMBERED TO 43"] [--chip "LIVE ON KICK · @handle"] [--keyword face] [--cta PULL]
          [--claim2 "2ND NUMBER"] [--before "ONE PACK" --after "1/1 AUTO"] [--price "$1,250" [--price-at S]] [--check]
+         [--cta-style pill|type] [--cta-text "COMMENT ANYTHING ✅\nFULL REPLAY IN YOUR DMS"] [--pill "COMMENT ANYTHING · REPLAY IN DMS"]
+         --cta-style pill (v2.3, skand.ai "comment anything, link in DMs" reference): the end card is a white pill with a green check
+         (--cta-text, two lines on \n) instead of the COMMENT/PULL type, same timing (last 2.5 s), and a small one-line pill
+         (--pill) sits under the title plate from 1.0 s to the end as plan["pillTop"]; the default "type" is today's output, byte for byte
          --price: the sold-comp price (ONLY when the item has compUrl); shows for 2.4 s with a cha-ching, at --price-at or 1.0 s after the badge
 v2.2 (Paper Crab additions, Oct 25): a title plate per spoken sentence (kit.title, y~220), an optional second number
 beat at 2/3 of the clip (--claim2: only a real number the stream gave), a before/after chip above the CTA, and --check:
@@ -78,6 +82,9 @@ plan = {"clip": clip, "dur": round(dur, 2), "blurtop": int(opt("--blurtop", "0")
         "captions": caps, "punches": punches, "pushes": pushes, "titles": titles, "claim2": claim2, "beforeafter": beforeafter,
         "cta": {"keyword": opt("--cta", "PULL"), "t0": round(dur, 2), "t1": round(dur + 2.5, 2)}}
 if beforeafter: beforeafter.update(t0=plan["cta"]["t0"], t1=plan["cta"]["t1"])
+if opt("--cta-style", "type") == "pill":                                                   # v2.3 pill end card + top pill
+    plan["cta"].update(style="pill", text=opt("--cta-text", "COMMENT ANYTHING \u2705\nFULL REPLAY IN YOUR DMS").replace("\\n", "\n"))
+    plan["pillTop"] = {"text": opt("--pill", "COMMENT ANYTHING \u00b7 REPLAY IN DMS"), "t0": 1.0, "t1": round(dur, 2)}
 ev = sorted(set([0.3, 1.0] + [c["t0"] for c in caps] + [p["t"] for p in punches] + [t["t0"] for t in titles] + ([claim2["t0"]] if claim2 else []) + ([price["t0"]] if price else [])
                 + [x for p in pushes for x in (p["t0"], p["t1"])] + [plan["cta"]["t0"]]))
 gaps = [b - a for a, b in zip(ev, ev[1:] + [dur])]
@@ -93,7 +100,7 @@ personas = {
     # a stranger: who, what and the number inside 1.5 s; the breaker credited on screen
     "stranger": bool(plan["chip"]["text"]) and plan["claim"]["t0"] <= 1.5 and bool(plan["claim"]["text"]) and bool(plan["badge"]["text"]),
     # a rival who has seen it before: a beat every <= 2 s, at least one punch, a second number or a before/after, a CTA
-    "rival": plan["check"]["ok"] and len(punches) >= 1 and bool(plan["cta"]["keyword"]) and 10 <= dur <= 40 and (claim2 is not None or beforeafter is not None or price is not None),
+    "rival": plan["check"]["ok"] and len(punches) >= 1 and (bool(plan["cta"]["keyword"]) or bool(plan["cta"].get("text")) or bool((plan.get("pillTop") or {}).get("text"))) and 10 <= dur <= 40 and (claim2 is not None or beforeafter is not None or price is not None),
 }
 failed = [k for k, v in personas.items() if not v]
 plan["personas"] = {"result": {k: ("pass" if v else "fail") for k, v in personas.items()}, "failed": failed, "hold": len(failed) >= 2}

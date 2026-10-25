@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """assemble2.py <beats.json> <host.mp4> <out.mp4> [--page cards] [--text "JADE CARGILL AUTO /43"] [--no-bed]
-Format v2.2 assembly (Oct 25; v2.1 + Paper Crab additions: a title plate per sentence at y~220, an optional second number
+Format v2.3 assembly (Oct 25; v2.2 + pill end card and top pill when beats ran with --cta-style pill: the CTA type is replaced by
+a white pill with a green check (kit.pill) centred on the darkened hold frame, scrim and pop kept, and a one-line pill sits under
+the title plate at y 330 from 1 s to the end with the title's spring entrance (the badge drops to y 470 under it); v2.1 + Paper Crab additions: a title plate per sentence at y~220, an optional second number
 beat at 2/3, a before/after chip above the CTA, a pop sound on every plate, a price plate with a cha-ching when the item has a sold comp; v6 quality: CRF 12 intermediates, CRF 17 final):
   VIDEO  host (handheld humanizer, clean voice) + claim number (Anton, gold) springing in at 0.3 s
          -> white flash -> framed clip: zoom plan (punches x1.24 + pushes), top blur band, bottom scrim,
@@ -47,7 +49,11 @@ def main():
         # ---- 2. clip: zoom plan + overlays (new kit) ; audio plain for now (mixed in step 4)
         K["chip"] = kit.chip(P["chip"]["text"], os.path.join(t, "chip.png"), page) if P["chip"]["text"] else None
         K["badge"] = kit.badge(P["badge"]["text"], os.path.join(t, "badge.png"), page) if P["badge"]["text"] else None
-        K["cta"] = kit.cta(P["cta"]["keyword"], os.path.join(t, "cta.png"), page); K["scrim"] = kit.scrim(os.path.join(t, "scrim.png"))
+        pill_end = P["cta"].get("style") == "pill"                                             # v2.3 pill end card
+        K["cta"] = kit.pill(P["cta"].get("text") or "COMMENT ANYTHING \u2705", os.path.join(t, "cta.png"), page) if pill_end else kit.cta(P["cta"]["keyword"], os.path.join(t, "cta.png"), page)
+        K["scrim"] = kit.scrim(os.path.join(t, "scrim.png"))
+        pt = P.get("pillTop")                                                                    # v2.3 top pill (under the title plate, left, max 620 wide: clear of the PiP)
+        K["pillTop"] = kit.pill(pt["text"], os.path.join(t, "pilltop.png"), page, size=48, maxw=620) if pt and pt.get("text") else None
         caps = [(c, kit.captionbox(c["words"], os.path.join(t, f"cap{i}.png"), page, keyword=c["keyword"])) for i, c in enumerate(P["captions"])]
         z = "1"
         for p in P["punches"]:
@@ -65,12 +71,14 @@ def main():
         if K["chip"]:
             w, hgt = K["chip"][1:]; c = P["chip"]; ov(K["chip"][0], 40, spring(c["t0"], c["t1"], 1300, hgt, "up"), c["t0"], c["t1"])
         if K["badge"]:
-            w, hgt = K["badge"][1:]; b = P["badge"]; ov(K["badge"][0], f"(W-{w})/2", spring(b["t0"], b["t1"], 400, hgt, "up"), b["t0"], b["t1"])
+            w, hgt = K["badge"][1:]; b = P["badge"]; ov(K["badge"][0], f"(W-{w})/2", spring(b["t0"], b["t1"], 470 if K["pillTop"] else 400, hgt, "up"), b["t0"], b["t1"])   # v2.3: badge sits lower under a top pill
         for c, (path, w, hgt) in caps:
             ov(path, f"(W-{w})/2", spring(c["t0"], c["t1"], 1440, hgt, "down"), c["t0"], c["t1"])
         for i, tt in enumerate(P.get("titles") or []):                                    # v2.2 sentence title plates
             path, w, hgt = kit.title(tt["text"], os.path.join(t, f"title{i}.png"), page)
             ov(path, "40", spring(tt["t0"], tt["t1"], 200, hgt, "up"), tt["t0"], tt["t1"])      # left, clear of the face PiP
+        if K["pillTop"]:
+            w, hgt = K["pillTop"][1:]; ov(K["pillTop"][0], "40", spring(pt["t0"], pt["t1"], 330, hgt, "up"), pt["t0"], pt["t1"])   # visible top ~378: under the title plate, clear of the PiP (y 150..~370)
         c2 = P.get("claim2")
         if c2 and c2.get("text"):                                                           # v2.2 second number beat
             path, w, hgt = kit.number(c2["text"], os.path.join(t, "num2.png"), page, size=200)
@@ -81,7 +89,7 @@ def main():
             ov(path, f"(W-{w})/2", spring(pr["t0"], pr["t1"], 640, hgt, "down"), pr["t0"], pr["t1"])
         ct = P["cta"]; w, hgt = K["cta"][1:]
         chain += f";[{cur}]eq=brightness=-0.15:saturation=0.8:enable='gte(t,{ct['t0']})'[vd]"; cur = "vd"
-        ov(K["cta"][0], f"(W-{w})/2", spring(ct["t0"], ct["t1"] + 1, 760, hgt, "down"), ct["t0"], ct["t1"] + 1)
+        ov(K["cta"][0], f"(W-{w})/2", spring(ct["t0"], ct["t1"] + 1, (820 - hgt // 2) if pill_end else 760, hgt, "down"), ct["t0"], ct["t1"] + 1)
         ba = P.get("beforeafter")
         if ba:                                                                               # v2.2 before/after chip above the CTA
             path, w, hgt = kit.beforeafter(ba["before"], ba["after"], os.path.join(t, "ba.png"), page)
@@ -109,6 +117,8 @@ def main():
         for tt in (P.get("titles") or []): ev.append(("pop", off + tt["t0"], -10))          # v2.2: every plate lands with a sound
         if c2 and c2.get("text"): ev.append(("whoosh", off + c2["t0"], -8)); ev.append(("impact", off + c2["t0"], -9))
         if ba: ev.append(("pop", off + ct["t0"] + 0.25, -6))
+        if K["pillTop"]: ev.append(("pop", off + pt["t0"], -8))                           # v2.3 top pill lands with a pop
+        if pill_end: ev.append(("pop", off + ct["t0"] + 0.05, -4))                         # v2.3 pill end card: pop on top of the impact
         if pr and pr.get("text"): ev.append(("chaching", off + pr["t0"], -3))        # the cha-ching lands with the price
         ev.append(("riser", off + ct["t0"] - 1.2, -12)); ev.append(("impact", off + ct["t0"], -2)); ev.append(("whoosh", off + ct["t0"], -6))
         ain = ["-i", hv, "-i", vc, "-i", loop]; k = 3; mix = []
