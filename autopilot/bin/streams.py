@@ -9,7 +9,7 @@ Gambling-sponsored streams (title/slug mentions stake, casino, slots, gamble, wa
 flagged "excluded": "gambling" and must not be cut (Josh's rule, Oct 24).
 Never bypass a block: a refused download is reported as {"error": ...}, nothing else is tried.
 """
-import json, re, subprocess, sys, urllib.request
+import json, os, re, subprocess, sys, urllib.request
 
 UA = {"User-Agent": "Mozilla/5.0"}
 GAMBLE = re.compile(r"\b(stake|casino|slots?|gambl\w*|wager\w*|bet(ting)?|roobet|rollbit|shuffle\.com)\b|onlyf\w*|\bnsfw\b", re.I)   # + adult-content mentions
@@ -71,14 +71,21 @@ def twitch_list(login, n=10):
         return {"error": p.stderr.strip().splitlines()[-1][:300]}
     return out
 
-def twitch_cut(url, start, length, out):
-    sec = f"*{int(start)}-{int(start)+int(length)}"
-    cmd = ["python3", "-m", "yt_dlp", "--no-warnings", "-q", "--download-sections", sec,
-           "-f", "bv*[height<=1080]+ba/b", "--merge-output-format", "mp4", "-o", out, url]
-    p = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
-    if p.returncode != 0:
-        return {"error": (p.stderr or p.stdout or "yt-dlp failed").strip().splitlines()[-1][:300]}
-    return {"ok": True, "out": out}
+def twitch_cut(url, start, length, out, quality="720p60"):
+    """Oct 25 (Fable): yt-dlp --download-sections writes an empty file for Twitch VODs (fragmented-mp4 HLS), so the slice is
+    cut by hls_slice.py from the playlist url: only the segments that cover the window are fetched (~20 s for 20 min)."""
+    g = subprocess.run(["python3", "-m", "yt_dlp", "--no-warnings", "-g", "-f", f"{quality}/best[height<=720]/best", url],
+                       capture_output=True, text=True, timeout=120)
+    m3u8 = (g.stdout.strip().splitlines() or [""])[0]
+    if g.returncode != 0 or not m3u8.startswith("http"):
+        return {"error": (g.stderr or "no playlist url").strip().splitlines()[-1][:300]}
+    here = os.path.dirname(os.path.abspath(__file__))
+    p = subprocess.run(["python3", os.path.join(here, "hls_slice.py"), m3u8, str(int(start)), str(int(length)), out],
+                       capture_output=True, text=True, timeout=900)
+    try:
+        return json.loads(p.stdout.strip().splitlines()[-1])
+    except Exception:
+        return {"error": (p.stderr or p.stdout or "hls_slice failed").strip()[-300:]}
 
 def main():
     a = sys.argv[1:]

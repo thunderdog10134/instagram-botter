@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Fetch new comments, or reply/hide.
 Usage: ig_comments.py fetch <job.json>   job: {"items":[{"clipId","username","igMediaId"}]}
-       ig_comments.py act <job.json>     job: {"username", "replies":[{"commentId","message"}], "hide":["commentId"]}"""
+       ig_comments.py act <job.json>     job: {"username", "replies":[{"commentId","message", "allowHandles":[], "allowUrls":[], "allowPrice":false}], "hide":["commentId"], "allowHandles":[], "allowUrls":[]}
+Every reply passes guard.outbound_ok before it is sent (no foreign urls/mentions, no secrets, no phishing or price text, <= 300 chars); a refused reply is reported as error "guard: <why>" and never sent."""
 import json, sys, time
 from common import api, is_err, ig_secret, GRAPH, NoSecret, read_state, write_state, now_iso, log, emit
+from guard import outbound_ok, clean_inbound
 
 def fetch(items):
     out = []
@@ -23,7 +25,7 @@ def fetch(items):
             if (c.get("username") or "").lower() == s["username"]:
                 continue
             ours = any((r.get("username") or "").lower() == s["username"] for r in (c.get("replies") or {}).get("data", []))
-            out.append({"clipId": it.get("clipId"), "username": s["username"], "commentId": c["id"], "text": c.get("text", ""),
+            out.append({"clipId": it.get("clipId"), "username": s["username"], "commentId": c["id"], "text": clean_inbound(c.get("text", "")),
                         "by": c.get("username"), "at": c.get("timestamp"), "hidden": c.get("hidden"), "alreadyReplied": ours or c["id"] in st["replied"]})
         write_state(f"comments-{s['username']}.json", st)
     return {"comments": out}
@@ -43,6 +45,10 @@ def act(j):
             res["replies"].append({"commentId": r["commentId"], "ok": False, "error": "already replied"}); continue
         if r["message"].strip().lower() in sent_today:
             res["replies"].append({"commentId": r["commentId"], "ok": False, "error": "same text already used today"}); continue
+        gok, why = outbound_ok(r["message"], allow_handles=[s["username"]] + list(j.get("allowHandles") or []) + list(r.get("allowHandles") or []),
+                               allow_urls=list(j.get("allowUrls") or []) + list(r.get("allowUrls") or []), allow_price=bool(r.get("allowPrice")))
+        if not gok:
+            res["replies"].append({"commentId": r["commentId"], "ok": False, "error": "guard: " + why}); continue
         js = api("POST", f"{GRAPH}/{r['commentId']}/replies", data={"message": r["message"]}, token=s["access_token"], retries=2)
         ok = not is_err(js)
         if ok:

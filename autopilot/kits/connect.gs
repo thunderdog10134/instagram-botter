@@ -5,7 +5,7 @@
  * Deploy: Web app, execute as Me, access Anyone. The /exec URL is the redirect URI in the Meta app.
  * No secrets live in this file.
  */
-var SCOPES = 'instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights,instagram_business_manage_comments';
+var SCOPES = 'instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights,instagram_business_manage_comments,instagram_business_manage_messages'; // manage_messages added Oct 25 (comment-to-DM private replies, approved by Josh); every account re-taps Allow once after this is deployed
 var API = 'https://graph.instagram.com/v25.0';
 
 function props_() { return PropertiesService.getScriptProperties(); }
