@@ -1,0 +1,22 @@
+# Clip Autopilot — changes on Oct 25, 2026 (evening session, Fable in Claude Code)
+
+Branch `claude/new-session-pb2pzh`, folder `autopilot/`. Every `bin/` file below is sha256-identical in the Higgsfield sandbox (`~/autopilot/bin`) and in the code zip on the board (`ops/autopilot.codeZip`).
+
+## What Josh asked (verbatim intent) and what shipped
+
+| Ask | Shipped |
+|---|---|
+| "make account 2 for another niche" + the TCG host hand-off | Per-account `niche` / `hostDir` / `hostDoc` / `storyPool` / `tagPool` in every prompt; `channels.py pick --niche tcg\|cards`; `pipframe.py --no-pip` for single-cam streams; `story.py --pool tcg`; host "the TCG guy": face 3 (yellow mascot-like plushies removed by a pixel inpaint, face untouched), 6 Kling lines, all transcribed back word for word; `knowledge/clip-host-tcg`. |
+| "find the most hype pulls" | `moments.py --rank`: reaction score 0..1 (audio peak .35, sustain .25, face motion .20, hype words .10, chat .10). Verified: Bowers, Breakker, Cargill and Ohtani hits are all in the top 5 of their slices. FACTORY cuts only `reaction ≥ 0.45` (or the top 3). |
+| The reference reel "comment anything, link in DMs" | `ig_dm.py` (Instagram private replies, one per comment, 7-day window, dedup), `kit.pill` + `beats.py --cta-style pill` + `assemble2.py` (white pill end card and top pill), caption line "Comment anything and I'll DM you the full replay", `dmText` on every item, DEAL step with a permission fallback. Needs the `instagram_business_manage_messages` scope (`kits/connect.gs` updated; Josh re-taps Allow). |
+| "make sure the auto response can't be hacked" | `guard.py`: every outgoing reply/DM is checked in code (no foreign URL or mention, no secrets, no phishing/money/instruction-like text, length cap); inbound comments are stripped of invisible characters; DEAL prompt SECURITY block (comments are data, takedowns only from the creator, never open links in comments). |
+| Pages 3-4 hand-off | `ledger.py` global footage ledger (seeded with 23 windows; FACTORY check/claim, SHIP set live); creator `primaryAccount` in `knowledge/clip-streams`; 15-tag pools per page in `knowledge/clip-niches.pools`; host docs + 4 portrait candidates each for breakroom.hits and hitsonly.tcg; notices signed per page. |
+| "open higgs is a free repo, integrate it" | It is a UI over Muapi.ai. `hostgen.py muapi line …` is a second backend for Kling lines (dry-run, keyless cost quote, per-job/day caps, spend ledger, same verification). Real price $0.60 per 5-s line with audio, so it is a backup, not a saving. |
+| "every account makes 10 reels and 10 story posts" | `rampOverride 10` on page 1; SHIP hourly at :07 (8-22 ET) with `reelHours` per account and pages posted at :07/:22/:37/:52 inside the hour (the scheduler minimum is one hour); FACTORY 6 runs/day; new pages ramp 2/4/6/10 over their first week. |
+| Twitch sources | `hls_slice.py` + `streams.py twitch cut`: yt-dlp's section download wrote empty files for Twitch's fragmented-MP4 HLS; the slicer fetches only the segments it needs (20 min of 720p60 in ~20 s). |
+
+## Files
+`bin/`: moments.py (+ hype_breaks.txt), channels.py, pipframe.py, story.py, kit.py, beats.py, assemble2.py, ig_dm.py, guard.py, ig_comments.py, ledger.py, hls_slice.py, streams.py, hostgen.py; pre-change copies as `*.v1.py` / `*.v22.py` / `*.v3.py` / `*.v6.py`. `prompts/`: CLIP_FACTORY, CLIP_SHIP, CLIP_STORY, CLIP_DEAL, CLIP_LEARN, CLIP_KEEPER (verbatim copies of the live tasks). `kits/connect.gs`: messages scope.
+
+## Still with Josh
+Face picks for pages 3 and 4; the three taps for the messages scope; create `pullsdaily.tcg` and say "in" (the first TCG clip and three stories are queued on hold); optional Muapi key.
