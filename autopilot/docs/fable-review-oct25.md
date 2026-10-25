@@ -59,12 +59,13 @@ GitHub is connected to this session, scoped to `thunderdog10134/instagram-botter
 2. Trial vs normal Reel, 12 each; starts when Instagram accepts the first trial.
 3. Host intro vs plain clip; only if the host arm stays under 50 views after 12 posts.
 
-## Needs Josh
+## Needs Josh (updated 5:00 PM ET)
 
-- Watch the v2.2 preview (Babe Ruth 1/1, 22 s) and, if it is right, say: **ship**.
+Josh approved everything at about 4:55 PM ET. Done on that: v2.2 is live (every new clip is built with it; the Ruth preview is queued as warmq-31), SHIP sends 3 trial and 3 normal Reels a day (posts 2, 4, 6), stories stay at 10 a day (the first v2 story went live at 4:55 PM), and the price beat is built: a "LAST SOLD $X" plate with a cha-ching at the payoff. The plate only appears when a real sold comp exists, and no comp source is reachable yet, so:
+
 - Comment "is she AI?" on the newest Reel (De7eoHMCkc8) from any account but the page, so the next DEAL run proves the auto-reply.
 - eBay developer key (free, developer.ebay.com with agentcity1965@gmail.com), then say: **ebay key ready**.
-- Say **retire painter** to switch off the stray PAINTER task.
+- Turn off the stray PAINTER task yourself (claude.ai, scheduled tasks, "Agent City · PAINTER (art in Gemini)"): you approved it, but this session was not allowed to switch a task off.
 - Add the GitHub connector to the CLIP KEEPER scheduled task so the weekly git sync runs.
 - Still open from before: J2 (sign up pullsdaily.tcg), J-archive (archive the 4 superseded reels), J5 (Stripe key, only before the first paid block), J11 (Healthchecks.io).
 
