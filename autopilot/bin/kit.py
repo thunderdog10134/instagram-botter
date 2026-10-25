@@ -112,6 +112,21 @@ def beforeafter(before, after, path, page="cards", size=56):
     d.polygon([(cx - r, cy - r), (cx + r // 2, cy), (cx - r, cy + r)], fill=acc + (255,))
     d.text((20 + px + wa + wr, y), b, font=f, fill=acc + (255,))
     return _save(im, path)
+def price(text, path, page="cards", label="LAST SOLD", size=170):
+    """Price plate (v2.2, Josh: 'the price of the card with a cha-ching'): Anton gold price with a thick dark outline and
+    shadow, a small Bebas label above it, on a dark rounded plate. Used ONLY when the item carries a sold-comp link."""
+    fp, fl = font("anton", size), font("bebas", 54); acc = PAGES[page]["accent"]
+    px0, py0, px1, py1 = _tw(fp, text); lx0, ly0, lx1, ly1 = _tw(fl, label)
+    pw, ph = px1 - px0, py1 - py0; lw, lh = lx1 - lx0, ly1 - ly0
+    pad = 34; w = max(pw, lw) + pad * 2 + 24; h = lh + 14 + ph + pad * 2
+    im = Image.new("RGBA", (w + 60, h + 60), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    d.rounded_rectangle([30 + 8, 30 + 10, 30 + w + 8, 30 + h + 10], 26, fill=(0, 0, 0, 120))
+    d.rounded_rectangle([30, 30, 30 + w, 30 + h], 26, fill=(14, 14, 14, 230))
+    d.rectangle([30 + 26, 30 + pad + lh + 6, 30 + w - 26, 30 + pad + lh + 10], fill=acc + (160,))
+    d.text((30 + (w - lw) // 2 - lx0, 30 + pad - ly0), label, font=fl, fill=(255, 255, 255, 230))
+    d.text((30 + (w - pw) // 2 - px0, 30 + pad + lh + 14 - py0), text, font=fp, fill=acc + (255,), stroke_width=10, stroke_fill=(15, 15, 15, 255))
+    im = im.rotate(2, resample=Image.BICUBIC, expand=True)
+    return _save(im, path)
 if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else "/tmp/kit"; os.makedirs(out, exist_ok=True)
     r = {"number": number("/43", f"{out}/number.png"), "badge": badge("NUMBERED TO 43", f"{out}/badge.png"), "chip": chip("LIVE ON KICK  ·  @HONEYHOLECOLLECT", f"{out}/chip.png"),

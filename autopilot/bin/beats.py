@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """beats.py <clip.mp4> <words.json> <out beats.json> [--claim "/43"] [--badge "NUMBERED TO 43"] [--chip "LIVE ON KICK · @handle"] [--keyword face] [--cta PULL]
-         [--claim2 "2ND NUMBER"] [--before "ONE PACK" --after "1/1 AUTO"] [--check]
+         [--claim2 "2ND NUMBER"] [--before "ONE PACK" --after "1/1 AUTO"] [--price "$1,250" [--price-at S]] [--check]
+         --price: the sold-comp price (ONLY when the item has compUrl); shows for 2.4 s with a cha-ching, at --price-at or 1.0 s after the badge
 v2.2 (Paper Crab additions, Oct 25): a title plate per spoken sentence (kit.title, y~220), an optional second number
 beat at 2/3 of the clip (--claim2: only a real number the stream gave), a before/after chip above the CTA, and --check:
 four persona checks (sound-off, caption-only, stranger, rival) printed as pass/fail; "hold": true when two or more fail
@@ -49,6 +50,7 @@ for sgs in sentences:
     titles.append({"t0": max(0, sgs[0][0]["start"] - 0.1), "t1": round(sgs[-1][-1]["end"] + 0.35, 2), "text": text})
 claim2_text = opt("--claim2", "").strip()
 claim2 = {"text": claim2_text, "t0": round(dur * 2 / 3, 2), "t1": round(min(dur * 2 / 3 + 1.6, dur - 0.2), 2)} if claim2_text else None
+price_text = opt("--price", "").strip()
 before, after = opt("--before", "").strip(), opt("--after", "").strip()
 beforeafter = {"before": before, "after": after} if before and after else None
 # punches on loud words
@@ -66,13 +68,17 @@ while t < dur - 0.3:
         p = {"t0": round(t + 0.1, 2), "t1": round(min(t + 2.0, dur), 2)}; pushes.append(p); events += [p["t0"], p["t1"]]; events.sort(); t = p["t1"]
 first_kw = next((w for w in words if kw and w["word"].strip(".,!?").lower() == kw.lower()), None)
 badge_t = first_kw["start"] if first_kw else (punches[0]["t"] if punches else 2.0)
-plan = {"clip": clip, "dur": round(dur, 2), "blurtop": int(opt("--blurtop", "0")), "claim": {"text": opt("--claim", ""), "t0": 0.3, "t1": 1.9},
+price = None
+if price_text:
+    pt0 = float(opt("--price-at", str(min(badge_t + 1.0, dur - 2.8))))
+    price = {"text": price_text, "t0": round(pt0, 2), "t1": round(min(pt0 + 2.4, dur - 0.1), 2)}
+plan = {"clip": clip, "dur": round(dur, 2), "blurtop": int(opt("--blurtop", "0")), "claim": {"text": opt("--claim", ""), "t0": 0.3, "t1": 1.9}, "price": price,
         "chip": {"text": opt("--chip", ""), "t0": 1.0, "t1": round(dur - 0.1, 2)},
         "badge": {"text": opt("--badge", ""), "t0": round(badge_t, 2), "t1": round(min(badge_t + 2.4, dur - 0.1), 2)},
         "captions": caps, "punches": punches, "pushes": pushes, "titles": titles, "claim2": claim2, "beforeafter": beforeafter,
         "cta": {"keyword": opt("--cta", "PULL"), "t0": round(dur, 2), "t1": round(dur + 2.5, 2)}}
 if beforeafter: beforeafter.update(t0=plan["cta"]["t0"], t1=plan["cta"]["t1"])
-ev = sorted(set([0.3, 1.0] + [c["t0"] for c in caps] + [p["t"] for p in punches] + [t["t0"] for t in titles] + ([claim2["t0"]] if claim2 else [])
+ev = sorted(set([0.3, 1.0] + [c["t0"] for c in caps] + [p["t"] for p in punches] + [t["t0"] for t in titles] + ([claim2["t0"]] if claim2 else []) + ([price["t0"]] if price else [])
                 + [x for p in pushes for x in (p["t0"], p["t1"])] + [plan["cta"]["t0"]]))
 gaps = [b - a for a, b in zip(ev, ev[1:] + [dur])]
 plan["check"] = {"events": len(ev), "longest_gap": round(max(gaps), 2), "ok": max(gaps) <= 2.05}
@@ -87,7 +93,7 @@ personas = {
     # a stranger: who, what and the number inside 1.5 s; the breaker credited on screen
     "stranger": bool(plan["chip"]["text"]) and plan["claim"]["t0"] <= 1.5 and bool(plan["claim"]["text"]) and bool(plan["badge"]["text"]),
     # a rival who has seen it before: a beat every <= 2 s, at least one punch, a second number or a before/after, a CTA
-    "rival": plan["check"]["ok"] and len(punches) >= 1 and bool(plan["cta"]["keyword"]) and 10 <= dur <= 40 and (claim2 is not None or beforeafter is not None),
+    "rival": plan["check"]["ok"] and len(punches) >= 1 and bool(plan["cta"]["keyword"]) and 10 <= dur <= 40 and (claim2 is not None or beforeafter is not None or price is not None),
 }
 failed = [k for k, v in personas.items() if not v]
 plan["personas"] = {"result": {k: ("pass" if v else "fail") for k, v in personas.items()}, "failed": failed, "hold": len(failed) >= 2}

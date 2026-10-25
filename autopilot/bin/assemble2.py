@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """assemble2.py <beats.json> <host.mp4> <out.mp4> [--page cards] [--text "JADE CARGILL AUTO /43"] [--no-bed]
 Format v2.2 assembly (Oct 25; v2.1 + Paper Crab additions: a title plate per sentence at y~220, an optional second number
-beat at 2/3, a before/after chip above the CTA, a pop sound on every plate; v6 quality: CRF 12 intermediates, CRF 17 final):
+beat at 2/3, a before/after chip above the CTA, a pop sound on every plate, a price plate with a cha-ching when the item has a sold comp; v6 quality: CRF 12 intermediates, CRF 17 final):
   VIDEO  host (handheld humanizer, clean voice) + claim number (Anton, gold) springing in at 0.3 s
          -> white flash -> framed clip: zoom plan (punches x1.24 + pushes), top blur band, bottom scrim,
             chip (Bebas), badge (Anton slab, tilted), captions (Bebas caps, gold keyword, outline+shadow, no box)
@@ -75,6 +75,10 @@ def main():
         if c2 and c2.get("text"):                                                           # v2.2 second number beat
             path, w, hgt = kit.number(c2["text"], os.path.join(t, "num2.png"), page, size=200)
             ov(path, f"(W-{w})/2", spring(c2["t0"], c2["t1"], 560, hgt, "down"), c2["t0"], c2["t1"])
+        pr = P.get("price")
+        if pr and pr.get("text"):                                                   # v2.2 price plate (sold comp only)
+            path, w, hgt = kit.price(pr["text"], os.path.join(t, "price.png"), page)
+            ov(path, f"(W-{w})/2", spring(pr["t0"], pr["t1"], 640, hgt, "down"), pr["t0"], pr["t1"])
         ct = P["cta"]; w, hgt = K["cta"][1:]
         chain += f";[{cur}]eq=brightness=-0.15:saturation=0.8:enable='gte(t,{ct['t0']})'[vd]"; cur = "vd"
         ov(K["cta"][0], f"(W-{w})/2", spring(ct["t0"], ct["t1"] + 1, 760, hgt, "down"), ct["t0"], ct["t1"] + 1)
@@ -105,6 +109,7 @@ def main():
         for tt in (P.get("titles") or []): ev.append(("pop", off + tt["t0"], -10))          # v2.2: every plate lands with a sound
         if c2 and c2.get("text"): ev.append(("whoosh", off + c2["t0"], -8)); ev.append(("impact", off + c2["t0"], -9))
         if ba: ev.append(("pop", off + ct["t0"] + 0.25, -6))
+        if pr and pr.get("text"): ev.append(("chaching", off + pr["t0"], -3))        # the cha-ching lands with the price
         ev.append(("riser", off + ct["t0"] - 1.2, -12)); ev.append(("impact", off + ct["t0"], -2)); ev.append(("whoosh", off + ct["t0"], -6))
         ain = ["-i", hv, "-i", vc, "-i", loop]; k = 3; mix = []
         if bed_on: ain += ["-i", f"{sfx}/bed.wav"]; mix.append(f"[{k}:a]volume=-26dB,atrim=0:{total:.2f}[bed]"); k += 1
