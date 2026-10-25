@@ -18,7 +18,7 @@ STEPS (CLIP DEAL):
    - question about the card, the set or who pulled it → answer only from the item's own fields (onScreenText, caption, creatorIg, sourceChannel, sourceUrl date): e.g. "that was @honeyholecollect's 10/23 break on Kick". Always credit the breaker by @handle; never claim the pull as ours.
    - "what's it worth / price?" → a number only if the item has `compUrl` (then "last one sold for $X" with nothing added); otherwise "no sold comp on that one yet — what would you pay?".
    - the item's `ctaKeyword` (v2 posts) → reply with the item's `ctaReply`.
-   - "is she AI / is this fake?" → honest: "the host is AI, the pull is real footage from @<creatorIg>'s stream".
+   - "is she AI / is this fake?" → honest: "the host is AI, the pull is real footage from @<creatorIg>'s stream" (both pages: the page-2 host is a guy, the page-1 host a woman; same answer). Say "breaker" on the cards page and "ripper" on the tcg page.
    - from the credited breaker's own account → a thank-you reply, and a "Needs you" line for Josh.
    - an offer, money, sponsorship, "DM me to promote", a brand → no reply; flag + "Needs you".
    - spam, scams, links, sexual comments about the host, slurs or harassment → hide it (`hide`), no reply. Plain negativity or criticism → no reply, leave it up.
