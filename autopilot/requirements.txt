@@ -1,0 +1,5 @@
+scenedetect==0.7.2
+mediapipe==1.1.1
+email-validator==2.3.0
+stripe==16.0.0
+duckdb==2.0.0
