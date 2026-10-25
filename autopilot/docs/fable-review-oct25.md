@@ -7,7 +7,7 @@ Tables and the full inventory: board doc `knowledge/review-oct25`. Build log: `o
 1. The page `@pullsdaily.cards` is on warming day 2 with 0 followers, 7 Reels live and 10 v6 Reels ready (12, 14-22); it posts 6 a day at 9:37, 11:37, 13:37, 15:37, 18:37 and 20:37 ET.
 2. The first v6-quality Reel (Brock Bowers auto, Classic Pack Breaks, collaborator invite sent) went live at 15:37 ET; the first trial Reel attempt is the 20:37 ET post.
 3. Every clip agent is on and ran today without an error row; the sandbox is intact and freshly backed up (code zip rebuilt, code now also in git).
-4. Views are too thin to judge anything: 3 posts with 24-hour numbers (129, 149 and 6 views); the host-intro test (warmq-12) had 5 views at 1 hour.
+4. Views are too thin to judge anything: 3 posts with 24-hour numbers (129, 149 and 6 views). At 4:36 PM ET the first v6 post (Bowers) had 20 views at 0.9 h, and the third use of the Breakker footage with the host had 120 views at 4 h, so the "re-posts get 0-5 views" rule from this morning is not holding either.
 5. v2.2 of the beats format (Paper Crab additions) is built and previewed on warmq-31; it ships the moment Josh says "ship".
 
 ## What works
@@ -43,7 +43,7 @@ Not fixed (with the reason):
 
 ## Repos
 
-GitHub is connected to this session, scoped to `thunderdog10134/instagram-botter` only, so I used it rather than creating `pullshot-autopilot` (which this session may not create). Branch `claude/new-session-pb2pzh`, folder `autopilot/`: `bin/` (every script, byte-checked against the sandbox by sha256), `prompts/` (the nine agent prompts verbatim, SHIP and FACTORY as updated today), `kits/connect.gs`, `requirements.txt`, `vendor/LICENSES.md`, `docs/board.md`, `docs/restore.md`, `README.md`, this review. Host videos, the FSRCNN model and the vendored repos stay in the zips (no Git LFS set up). `ops/autopilot.repo/repoCommit/repoAt` point at the commit. The repo's old `main.py` is an unrelated "Instagram botter" script from 2023; it is left untouched and is not used by anything.
+GitHub is connected to this session, scoped to `thunderdog10134/instagram-botter` only, so I used it rather than creating `pullshot-autopilot` (which this session may not create). Branch `claude/new-session-pb2pzh`, folder `autopilot/`: `bin/` (every script, byte-checked against the sandbox by sha256), `prompts/` (the nine agent prompts verbatim, SHIP and FACTORY as updated today), `kits/connect.gs`, `requirements.txt`, `vendor/LICENSES.md`, `docs/board.md`, `docs/restore.md`, `README.md`, this review. Host videos, the FSRCNN model and the vendored repos stay in the zips (no Git LFS set up). `ops/autopilot.repo/repoCommit/repoAt` point at commit e7ec3a9 (46 files byte-checked by sha256). The repo's old `main.py` is an unrelated "Instagram botter" script from 2023; it is left untouched and is not used by anything.
 
 ## Each island
 
@@ -61,4 +61,11 @@ GitHub is connected to this session, scoped to `thunderdog10134/instagram-botter
 
 ## Needs Josh
 
-See the reply: ship (v2.2 preview), one comment on the newest Reel to prove the auto-reply, eBay developer key, retire painter, J2 sign-up, J-archive, Stripe key (J5), Healthchecks (J11).
+- Watch the v2.2 preview (Babe Ruth 1/1, 22 s) and, if it is right, say: **ship**.
+- Comment "is she AI?" on the newest Reel (De7eoHMCkc8) from any account but the page, so the next DEAL run proves the auto-reply.
+- eBay developer key (free, developer.ebay.com with agentcity1965@gmail.com), then say: **ebay key ready**.
+- Say **retire painter** to switch off the stray PAINTER task.
+- Add the GitHub connector to the CLIP KEEPER scheduled task so the weekly git sync runs.
+- Still open from before: J2 (sign up pullsdaily.tcg), J-archive (archive the 4 superseded reels), J5 (Stripe key, only before the first paid block), J11 (Healthchecks.io).
+
+Done without Josh today: J-ben-pause (all 14 agents were already off) and J-github (code is in instagram-botter).
