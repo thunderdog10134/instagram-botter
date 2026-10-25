@@ -13,6 +13,13 @@ Template mode (use this):
     potd      image  tilted framed still, "pull of the day" + date
     reel      image  "new reel up" teaser with a play badge (post only after that reel is live)
     question  image  a hobby question over a blurred collage, reply A or B (--question or one from the pool)
+  v3 engagement templates (Josh, Oct 25 ~5 PM: "ask the people what they want to see, guess the value of cards"):
+    wantsee   image  "what do you want to see next?" with four themed options, reply A-D (not about one reel; no --at needed)
+    guessvalue image "guess what this sold for" over the card still with four price buckets, reply A-D; never shows a price
+    reveal    image  the answer to guessvalue: "it sold for $X" (needs --price = a real sold comp; FACTORY passes it only with compUrl)
+    keepsell  image  "keep it or sell it?" over the card, two buttons, reply A or B
+    captionthis image the breaker's face cam big, "caption this reaction", reply with a line
+    hottake   image  a hobby hot take from the pool (or --question "text"), AGREE / DISAGREE
   The clip is a finished vertical clip (1080x1920, PiP top-right at 580,150 460 wide). --at = reveal second.
   --seed picks the theme and the wording, so the same clip never gets two identical stories.
 Old modes (kept for older docs): story.py video|image ... (see v1 usage in story.v1.py)
@@ -44,7 +51,23 @@ WORDS = {
     "potd": ["PULL OF THE DAY", "HIT OF THE DAY", "TODAY'S BEST PULL"],
     "reel": ["NEW REEL UP", "JUST POSTED", "YOU MISSED THIS ONE"],
     "reel_sub": ["tap our profile to watch", "full clip on our page", "watch it on the page"],
+    "wantsee": ["WHAT DO YOU WANT TO SEE NEXT?", "YOU PICK TOMORROW'S CLIPS", "WHAT SHOULD WE CLIP NEXT?"],
+    "wantsee_sub": ["reply A, B, C or D", "vote with a letter", "most votes wins"],
+    "guessvalue": ["GUESS WHAT THIS SOLD FOR", "HOW MUCH IS THIS WORTH?", "PRICE CHECK: YOUR GUESS?", "NAME THE PRICE"],
+    "guessvalue_sub": ["reply A, B, C or D", "no googling", "closest guess wins bragging rights"],
+    "reveal": ["IT SOLD FOR", "LAST SOLD PRICE", "THE ANSWER"],
+    "keepsell": ["KEEP IT OR SELL IT?", "PC OR FLIP?", "WOULD YOU SELL THIS?"],
+    "captionthis": ["CAPTION THIS REACTION", "WHAT IS HE THINKING?", "CAPTION THIS FACE"],
+    "hottake": ["HOT TAKE", "AGREE OR DISAGREE?", "SETTLE THIS"],
 }
+WANT_OPTIONS = ["BIGGEST HITS OF THE WEEK", "BREAKER REACTIONS", "1/1 CHASES", "ROOKIE AUTOS", "FOOTBALL BREAKS", "BASEBALL BREAKS",
+                "BASKETBALL BREAKS", "POKEMON RIPS", "VINTAGE CUT AUTOS", "CASE HITS", "WORST BEATS (SO CLOSE)", "BIG-NAME NUMBERED CARDS"]
+VALUE_BUCKETS = [["UNDER $50", "$50-200", "$200-1,000", "$1,000+"], ["UNDER $100", "$100-500", "$500-2,000", "$2,000+"],
+                 ["UNDER $25", "$25-100", "$100-500", "$500+"], ["UNDER $250", "$250-1,000", "$1,000-5,000", "$5,000+"]]
+HOT_TAKES = ["Numbered parallels matter more than the player.", "A 1/1 of a nobody beats a base card of a star.", "Grading a card you will never sell is a waste of money.",
+             "Breaks are the only fun way to open modern product.", "On-card autos only. Sticker autos don't count.", "Vintage cut autos are the best cards in the hobby.",
+             "Pokemon is a better long-term hold than sports cards.", "Retail blasters are never worth it.", "Case hits should always be sold the same week.",
+             "The hobby peaked in 2021 and it's still coming down."]
 QUESTIONS = [("ONE AUTO /10", "TEN BASE ROOKIES"), ("RIP IT", "KEEP IT SEALED"), ("GRADE IT", "KEEP IT RAW"),
              ("CHROME", "PAPER"), ("FOOTBALL BREAKS", "BASEBALL BREAKS"), ("HOBBY BOX", "RETAIL BLASTER"),
              ("YOUR GUY'S /99", "A RANDOM 1/1"), ("PATCH AUTO", "ON-CARD AUTO"), ("ROOKIE CARD", "VETERAN 1/1"),
@@ -157,6 +180,28 @@ def video_with_overlays(clip, start, ln, out, overlays, speed=1.0, pre=None):
 def blank():
     return Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
 
+def options_card(img, th, header, opts, y0=560, h=None, letters="ABCD", reply="reply A, B, C or D"):
+    """A white rounded card with a header and 2-4 lettered option buttons (the question template's look)."""
+    n = len(opts); rowh = 120 if n > 2 else 170; gap = 20
+    h = h or (120 + n * (rowh + gap) + 70)                    # header + rows + the reply line inside the card
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([70, y0, 1010, y0 + h], radius=40, fill=(255, 255, 255, 240))
+    dark = (18, 18, 18, 255)
+    fq = font("archivo", 50); w = d.textlength(header, font=fq); d.text((540 - w / 2, y0 + 40), header, font=fq, fill=(20, 20, 20))
+    for k, txt in enumerate(opts):
+        yy = y0 + 120 + k * (rowh + gap)
+        d.rounded_rectangle([120, yy, 960, yy + rowh], radius=28, fill=th["acc"] + (255,), outline=dark, width=4)
+        r = min(rowh // 2 - 18, 50); cx, cy = 180, yy + rowh // 2
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(0, 0, 0))
+        ft = font("archivo", int(r * 1.1)); tag = letters[k]; wt = d.textlength(tag, font=ft); bb = d.textbbox((0, 0), tag, font=ft)
+        d.text((cx - wt / 2, cy - (bb[3] - bb[1]) / 2 - bb[1]), tag, font=ft, fill=th["acc"])
+        fnt, lines = wrap(d, txt, th["head"], 54 if n > 2 else 64, 660)
+        lh = 58 if n > 2 else 72
+        for i2, ln in enumerate(lines[:2]):
+            d.text((262, cy - len(lines[:2]) * lh / 2 + i2 * lh + 4), ln, font=fnt, fill=th["on"])
+    label(img, y0 + h - 78, reply, size=38, fg=(255, 255, 255), bg=(18, 18, 18, 230))
+    return y0 + h
+
 def make(tpl, clip, out, at, title, handle, where, rnd, th, t):
     pick = lambda k: rnd.choice(WORDS[k])
     if tpl == "hit":
@@ -260,6 +305,57 @@ def make(tpl, clip, out, at, title, handle, where, rnd, th, t):
                 d.text((300, y0 + 120 - len(lines[:2]) * 40 + i2 * 80), ln, font=fnt, fill=th["on"])
         bar(img, 360, "SETTLE THIS", th, size=96, tilt=rnd.choice([-2, 2]))
         label(img, 1440, "reply A or B", size=42); credit(img, handle, where, y=1560)
+    elif tpl == "wantsee":
+        img = blurbg(fr, 0.55); opts = rnd.sample(WANT_OPTIONS, 4)
+        bar(img, 330, pick("wantsee"), th, size=80, tilt=rnd.choice([-2, 0, 2]))
+        yend = options_card(img, th, "PICK ONE", opts, y0=470, reply=pick("wantsee_sub"))
+        credit(img, handle, where, y=1560)
+    elif tpl == "guessvalue":
+        img = fr.convert("RGBA"); grad = Image.new("L", (1, 1920))
+        for y in range(1920):
+            grad.putpixel((0, y), int(max(0, (y - 700) / 1220) * 230))
+        img.alpha_composite(Image.merge("RGBA", [Image.new("L", (1080, 1920), 0)] * 3 + [grad.resize((1080, 1920))]))
+        bar(img, 330, pick("guessvalue"), th, size=78, tilt=rnd.choice([-2, 0]))
+        label(img, 470, title, size=44, fname="mont")
+        options_card(img, th, "YOUR GUESS", rnd.choice(VALUE_BUCKETS), y0=800, reply=pick("guessvalue_sub"))
+        credit(img, handle, where, y=1612)
+    elif tpl == "reveal":
+        price = opt("--price")
+        if not price:
+            raise SystemExit(json.dumps({"error": "reveal needs --price (a real sold comp)"}))
+        img = blurbg(fr, 0.5); card = fr.resize((560, 995), Image.LANCZOS)
+        card = ImageOps.expand(card, border=14, fill=(255, 255, 255)).convert("RGBA").rotate(rnd.choice([-3, 3]), resample=Image.BICUBIC, expand=True)
+        img.alpha_composite(card, ((1080 - card.width) // 2, 300))
+        bar(img, 300, pick("reveal"), th, size=84)
+        d = ImageDraw.Draw(img); fp = font("anton", 190); w = d.textlength(price, font=fp)
+        d.rounded_rectangle([540 - w / 2 - 50, 1330, 540 + w / 2 + 50, 1560], radius=40, fill=(10, 10, 10, 225))
+        d.text((540 - w / 2, 1340), price, font=fp, fill=th["acc"], stroke_width=8, stroke_fill=(10, 10, 10))
+        label(img, 1580, "last sold comp · " + title.lower(), size=34, fname="mont"); credit(img, handle, where, y=1640)
+    elif tpl == "keepsell":
+        img = fr.convert("RGBA"); grad = Image.new("L", (1, 1920))
+        for y in range(1920):
+            grad.putpixel((0, y), int(max(0, (y - 900) / 1020) * 220))
+        img.alpha_composite(Image.merge("RGBA", [Image.new("L", (1080, 1920), 0)] * 3 + [grad.resize((1080, 1920))]))
+        bar(img, 330, pick("keepsell"), th, size=80, tilt=rnd.choice([-2, 2]))
+        label(img, 470, title, size=44, fname="mont")
+        options_card(img, th, "YOU PULLED THIS", ["KEEP IT (PC FOREVER)", "SELL IT TODAY"], y0=960, letters="AB", reply="reply A or B")
+        credit(img, handle, where, y=1612)
+    elif tpl == "captionthis":
+        img = blurbg(fr, 0.5); pip = fr.crop((580, 150, 1040, 382)).resize((1000, 504), Image.LANCZOS)
+        pip = ImageOps.expand(pip, border=12, fill=th["acc"]); img.paste(pip, (28, 600))
+        bar(img, 420, pick("captionthis"), th, size=80, tilt=rnd.choice([-2, 0, 2]))
+        label(img, 1180, "reply with your best line", size=42); label(img, 1290, "the moment: " + title.lower(), size=36, fname="mont")
+        credit(img, handle, where, y=1560)
+    elif tpl == "hottake":
+        qa = opt("--question"); take = qa if qa else rnd.choice(HOT_TAKES)
+        img = blurbg(fr, 0.6); d = ImageDraw.Draw(img)
+        d.rounded_rectangle([70, 470, 1010, 890], radius=40, fill=(255, 255, 255, 240))
+        fnt, lines = wrap(d, take, "archivo", 54, 820)
+        for k, ln in enumerate(lines[:4]):
+            w = d.textlength(ln, font=fnt); d.text((540 - w / 2, 530 + k * 74), ln, font=fnt, fill=(20, 20, 20))
+        bar(img, 360, pick("hottake"), th, size=92, tilt=rnd.choice([-2, 2]))
+        options_card(img, th, "YOUR CALL", ["AGREE", "DISAGREE"], y0=930, letters="AB", reply="reply A or B")
+        credit(img, handle, where, y=1612)
     else:
         raise SystemExit(json.dumps({"error": f"unknown template {tpl}"}))
     img.convert("RGB").save(out, quality=92)
