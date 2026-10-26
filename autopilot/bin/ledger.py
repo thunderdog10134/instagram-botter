@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """ledger.py - global footage ledger so the same stream window is never posted by two of our pages. One JSON line out, exit 0.
-  ledger.py check  <sourceUrl> <offsetS> [--len 20] [--account h]       -> {"free": bool, "conflict": window|null}
+  ledger.py check  <sourceUrl> <offsetS> [--len 20] [--account h] [--item id] [--mode near|overlap] -> {"free": bool, "conflict": window|null}
+      mode near (default, FACTORY before cutting): any active window within 90 s. mode overlap (SHIP before posting, with --item = the
+      item itself): only windows whose footage actually overlaps (|diff| < longer length + 2 s).
   ledger.py claim  <sourceUrl> <offsetS> <account> <itemId> [--len 20]  -> {"ok": bool, "conflict": ...} appends status "queued"
   ledger.py set <itemId> <queued|live|retired|bad> | ledger.py list [--account h] [--since ISO] | ledger.py import <json file>
 Conflict: same normalised sourceUrl (no query, no trailing slash, lower-case host) and |offset - other.offset| < 90 s, across ALL
@@ -62,16 +64,26 @@ def save(st):
     write_state(STATE_NAME, st)  # common.out(): temp file + os.replace
 
 
-def find_conflict(windows, url, offset):
-    """First active window on the same normalised url whose offset is within WINDOW_S seconds."""
+def find_conflict(windows, url, offset, length=None, ignore=None, mode="near"):
+    """First active window on the same normalised url that collides with (offset, length).
+    mode "near": offsets within WINDOW_S seconds (FACTORY: never cut two moments that close).
+    mode "overlap": the two clip windows actually share footage (|diff| < longer length + 2 s) - SHIP's pre-post check.
+    ignore: an itemId to skip (the item being checked itself)."""
     nurl = norm_url(url)
     off = to_float(offset)
+    ln = to_float(length, 20.0) if length is not None else 20.0
     for w in windows:
         if w.get("status") in INACTIVE:
             continue
+        if ignore is not None and str(w.get("itemId")) == str(ignore):
+            continue
         if norm_url(w.get("sourceUrl")) != nurl:
             continue
-        if abs(off - to_float(w.get("offsetS"))) < WINDOW_S:
+        diff = abs(off - to_float(w.get("offsetS")))
+        if mode == "overlap":
+            if diff < max(ln, to_float(w.get("lenS"), 20.0)) + 2:
+                return w
+        elif diff < WINDOW_S:
             return w
     return None
 
@@ -100,10 +112,11 @@ def parse_opts(args):
 
 def cmd_check(pos, opts):
     if len(pos) < 2:
-        emit({"free": False, "error": "usage: check <sourceUrl> <offsetS> [--len 20] [--account h]"})
+        emit({"free": False, "error": "usage: check <sourceUrl> <offsetS> [--len 20] [--account h] [--item id] [--mode near|overlap]"})
     st = load()
-    c = find_conflict(st["windows"], pos[0], pos[1])
-    emit({"free": c is None, "conflict": c})
+    c = find_conflict(st["windows"], pos[0], pos[1], length=opts.get("len"), ignore=opts.get("item"),
+                      mode=opts.get("mode", "near"))
+    emit({"free": c is None, "conflict": c, "mode": opts.get("mode", "near")})
 
 
 def cmd_claim(pos, opts):

@@ -20,3 +20,9 @@ Branch `claude/new-session-pb2pzh`, folder `autopilot/`. Every `bin/` file below
 
 ## Still with Josh
 Face picks for pages 3 and 4; the three taps for the messages scope; create `pullsdaily.tcg` and say "in" (the first TCG clip and three stories are queued on hold); optional Muapi key.
+
+## Oct 25 evening sync (accounts 2 and 3)
+
+- `bin/ledger.py` (from the desktop clip thread, sha 44c68cda…): `check` gained `--item <id>` (skip the item's own queued window) and `--mode near|overlap` (`overlap` = |Δoffset| < longer `lenS` + 2 s, SHIP's pre-post check; `near` = 90 s, FACTORY's cutting rule). Backup `bin/ledger.v1.py` in the sandbox.
+- `prompts/CLIP_SHIP.md`: live v6 text with the NO DOUBLE POSTS block, 5 trial + 5 normal, rampOverride 10 on every connected account.
+- Board: `accounts/pullsdaily.tcg` (page 2, connected Oct 25 8:19 PM ET, 10/10, first clip + 3 stories released); `accounts/breakroom.hits` (page 3, created Oct 25 ~9:10 PM ET, status `created` until the Tester role + Allow land a token).
