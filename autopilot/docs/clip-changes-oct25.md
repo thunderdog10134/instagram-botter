@@ -26,3 +26,10 @@ Face picks for pages 3 and 4; the three taps for the messages scope; create `pul
 - `bin/ledger.py` (from the desktop clip thread, sha 44c68cda…): `check` gained `--item <id>` (skip the item's own queued window) and `--mode near|overlap` (`overlap` = |Δoffset| < longer `lenS` + 2 s, SHIP's pre-post check; `near` = 90 s, FACTORY's cutting rule). Backup `bin/ledger.v1.py` in the sandbox.
 - `prompts/CLIP_SHIP.md`: live v6 text with the NO DOUBLE POSTS block, 5 trial + 5 normal, rampOverride 10 on every connected account.
 - Board: `accounts/pullsdaily.tcg` (page 2, connected Oct 25 8:19 PM ET, 10/10, first clip + 3 stories released); `accounts/breakroom.hits` (page 3, created Oct 25 ~9:10 PM ET, status `created` until the Tester role + Allow land a token).
+- Correction (Oct 26 02:20Z): the desktop clip thread finished account 3 before the note above landed. `accounts/breakroom.hits` v3 is authoritative: connected Oct 25 8:44 PM ET, warming, 10/10, `:22` slots, host lines on cand_2.
+
+## Oct 25 late sync (account 4)
+
+- `hitsonly.tcg` (page 4, tcg, "Hits Only"): created by Josh 8:55 PM ET, Instagram Tester invite accepted, Creator conversion + Allow 9:13 PM ET, token in `~/secrets/ig-hitsonly.tcg.json` (sandbox only), `whoami` ok. `accounts/hitsonly.tcg` v3: warming, 10/10, `reelHours` 9 11 12 14 15 17 18 20 21 22 at `:52`, `rampOverride 10`.
+- Host (`knowledge/clip-host-hitsonly.tcg` v4): candidate 3 picked (plain white tee, slabs, plain plushies, no AI lettering) as `host/hitsonly/host.png`; 6 Kling 3.0 lines (knew, chase4, godpack4, flip4, quiet4, tentimes4; 48 credits) rendered from it, every transcript matched 1.0 with `host/hitsonly/verify.py`, and 3 frames per line viewed on contact sheets. Pages 2-4 host spend: 145 of the approved 170; balance 112.
+- Stock at 10:20 PM ET (ready Reels / ready Stories): pullsdaily.cards 9 / 41, pullsdaily.tcg 1 / 9, breakroom.hits 2 / 8, hitsonly.tcg first clip in progress / 3. FACTORY makes about one usable clip per 40-minute run because the cards/tcg channel lists are thin (6 and 22 clippable); SCOUT fired to grow them, FACTORY chains itself (cap 12 tonight) until every page holds 10.
