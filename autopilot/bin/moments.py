@@ -22,7 +22,8 @@ Hype ranking (Josh, Oct 25: "find the most hype pulls, like the reactions are in
   Dropped components renormalise the remaining weights to sum to 1. Moments are sorted by reaction (desc), limited to --top,
   and keep the same fields as the plain mode plus "reaction", "components" (null = dropped), "hypeWords", "weights" (as used)
   and "raw" (unscaled values); "allCandidates" lists every scored peak. Keys are slicem0.. in rank order.
-  Only the final --top moments get the 27 s transcript and scene-cut lead-in, so FACTORY can cut start..end straight from the output.
+  Only the final --top moments get the scene-cut lead-in, and only the first --words-top of them (default 3) get the 27 s
+  transcript (the rest carry the 8 s hit transcript as "said"); that second whisper pass was over half the ranking time.
   A 20 min 720p60 slice ranks in 2-3 min on 1 CPU. Without --rank the behaviour is exactly the old one."""
 import json, os, re, subprocess, sys, tempfile, time
 import numpy as np
@@ -210,6 +211,7 @@ def chat_burst(ts, P):
 
 def rank(src, outp):
     K, gap, model = int(opt("--top", "8")), float(opt("--gap", "60")), opt("--model", "tiny.en")
+    WT = int(opt("--words-top", "3"))
     face = parse_face(opt("--face", "")); chatp, hwp = opt("--chat", ""), opt("--hype-words", "")
     phrases = list(HYPE)
     if hwp:
@@ -278,11 +280,12 @@ def rank(src, outp):
         lead = [q for q in cuts if P - 8 <= q <= P - 4]
         start = lead[-1] if lead else max(0.0, P - 6.5)
         end = min(dur, P + 6.0)
-        wl = words(src, a0, a1, model, wm)
+        wl = words(src, a0, a1, model, wm) if j < WT else []
         moments.append({"key": f"{sid}m{j}", "peak": round(P, 2), "start": round(start, 2), "end": round(end, 2),
                         "sceneCut": near[0] if near else None, "sceneCuts": cuts, "startOnCut": bool(lead),
                         "transients": [round(t, 2) for t in tr if a0 <= t <= a1], "score": round(float(sc[int(P / step)]), 2),
-                        "words": wl, "said": " ".join(w["word"] for w in wl)[:800], "reaction": c["reaction"], "components": c["components"],
+                        "words": wl, "said": (" ".join(w["word"] for w in wl) if wl else (c["raw"].get("saidHit") or ""))[:800],
+                        "wordsFull": bool(wl), "reaction": c["reaction"], "components": c["components"],
                         "hypeWords": c["hypeWords"], "raw": c["raw"], "weights": c["weights"]})
     timing["top"] = round(time.time() - t1, 1)
     res = {"at": now_iso(), "source": src, "duration": round(dur, 1), "rank": True, "top": K, "candidates": len(cands), "medianDb": round(med, 1),
